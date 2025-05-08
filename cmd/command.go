@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/DinnieJ/njav-downloader/pkg/config"
+	"github.com/DinnieJ/njav-downloader/pkg/driver"
 	msg "github.com/DinnieJ/njav-downloader/pkg/i18n"
 	"github.com/spf13/cobra"
 )
@@ -37,7 +38,10 @@ func NewApplication(version string, appName string, BuildSrc string) *App {
 				fmt.Println("Unable to init config", err)
 			}
 
-			// defer t.Terminate()
+			t := driver.WebDriver{}
+			t.InitWebDriver(config)
+
+			defer t.Terminate()
 		},
 	}
 	// mainCmd.

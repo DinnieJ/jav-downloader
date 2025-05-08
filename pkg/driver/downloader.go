@@ -1,77 +1,33 @@
 package driver
 
 import (
-	"fmt"
-	"io"
-	"net/http"
 	"os"
 	"path/filepath"
+
+	"github.com/DinnieJ/njav-downloader/pkg/config"
+	"github.com/DinnieJ/njav-downloader/pkg/utils"
 )
 
-func getDownloadDriverPath() (string, error) {
-	homeDir, err := os.UserHomeDir()
-	if err != nil {
-		return "", err
-	}
-
-	absPath := filepath.Join(homeDir, DriverDirectory, "DinnieJ")
-	return absPath, nil
-}
-
-func createFolderIfNotExist(path string) error {
-	info, err := os.Stat(path)
-	if err != nil {
-		return err
-	}
-	if os.IsNotExist(err) || !info.IsDir() {
-		os.MkdirAll(path, 0755)
-	}
-	return nil
-}
-
-func checkFileExist(path string) error {
-	info, err := os.Stat(path)
-	if err != nil {
-		return err
-	}
-	if os.IsNotExist(err) || info.IsDir() {
-		return fmt.Errorf("file not exist in provided path")
-	}
-	return nil
-}
-func downloadDriver(dest string) error {
-	resp, err := http.Get(DriverDownloadUrl)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != 200 {
-		return fmt.Errorf("Failed to download driver")
-	}
-
-	binary, err := io.ReadAll(resp.Body)
-	if err := os.WriteFile(dest, binary, 0775); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func GetDriverPath() (string, error) {
-	absDriverFolderPath, err := getDownloadDriverPath()
-	createFolderIfNotExist(absDriverFolderPath) // creating folder regardless
-	if err != nil {
-		return "", err
-	}
-	fullPath := filepath.Join(absDriverFolderPath, OutputFilename)
-	zipPath := filepath.Join(absDriverFolderPath, "driver.zip")
-	if err := checkFileExist(fullPath); err != nil {
-		if errDownload := downloadDriver(zipPath); errDownload != nil {
-			return "", errDownload
+func GetDriverPath(cfg *config.Config) (string, error) {
+	driverPath := filepath.Join(cfg.FolderPath, OutputFilename)
+	if !utils.CheckFileExist(driverPath) {
+		LOGGER.Info("Web Driver not found, downloading....")
+		if err := DownloadDriver(cfg.FolderPath); err != nil {
+			return "", err
 		}
-		unzip(zipPath, absDriverFolderPath)
 	}
+	return driverPath, nil
+}
 
-	return fullPath, nil
+func DownloadDriver(dest string) error {
+	tmpDir := os.TempDir()
+	zipPath := filepath.Join(tmpDir, "driver.zip")
+	if err := utils.DownloadFile(DriverDownloadUrl, zipPath); err != nil {
+		return err
+	}
+	if err := utils.Unzip(zipPath, dest); err != nil {
+		return err
+	}
+	os.Remove(zipPath)
+	return nil
 }

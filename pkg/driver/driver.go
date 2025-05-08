@@ -3,17 +3,27 @@ package driver
 import (
 	"fmt"
 
+	"github.com/DinnieJ/njav-downloader/pkg/config"
+	"github.com/DinnieJ/njav-downloader/pkg/logger"
 	"github.com/tebeka/selenium"
 )
 
 type WebDriver struct {
-	tempDriverDir string
-	service       *selenium.Service
-	webdriver     selenium.WebDriver
+	service   *selenium.Service
+	webdriver selenium.WebDriver
 }
 
-func (w *WebDriver) InitWebDriver() error {
-	fullPath, err := GetDriverPath()
+var LOGGER *logger.Logger
+
+func init() {
+	LOGGER = logger.GetLogger(&logger.LoggerConfig{
+		Name:  "Driver",
+		Level: logger.DEBUG,
+	})
+}
+
+func (w *WebDriver) InitWebDriver(config *config.Config) error {
+	fullPath, err := GetDriverPath(config)
 	if err != nil {
 		return err
 	}
@@ -49,6 +59,10 @@ func (w *WebDriver) InitWebDriver() error {
 
 	w.webdriver = wd
 	return nil
+}
+
+func (w *WebDriver) GetWebDriver() selenium.WebDriver {
+	return w.webdriver
 }
 
 func (w *WebDriver) Terminate() error {
